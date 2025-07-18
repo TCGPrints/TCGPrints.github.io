@@ -1170,11 +1170,11 @@
                               ["Zoroark"],
                               ["Zorua"],
                               ["Zubat"],
-                              ["Zweilous"],
+                              ["Zweilous"]
    ],
    "pokemonCollSetReg": {
-                                                    "Abomasnow": [ [60", "DRI,I"], ["101", "PAF,G"], ["11", "PAL,G"] ],
-                                                    "Abra": [ [80", "TWM,H"], ["148", "PAF,G"], ["63", "MEW,G"] ],
+                                                    "Abomasnow": [[60", "DRI,I"], ["101", "PAF,G"], ["11", "PAL,G"] ],
+                                                    "Abra": [ [80", "TWM,H"], ["148", "PAF,G"], ["63", "MEW,G"]],
                                                     "Absol": [ [30", "SFA,H"], ["113", "PAR,G"] ],
                                                     "Absol ex": [ [135", "OBF,G"], ["214", "OBF,G"] ],
                                                     "Accelgor": [ [9", "WHT,I"], ["94", "WHT,I"], ["13", "JTG,I"] ],
@@ -2343,8 +2343,8 @@
                                                     "Zoroark": [ [32", "SFA,H"], ["62", "WHT,I"], ["143", "WHT,I"] ],
                                                     "Zorua": [ [31", "SFA,H"], ["75", "SFA,H"], ["61", "WHT,I"], ["142", "WHT,I"] ],
                                                     "Zubat": [ [27", "SFA,H"], ["110", "PAR,G"], ["41", "MEW,G"] ],
-                                                    "Zweilous": [ [118", "SSP,H"], ["66", "WHT,I"], ["147", "WHT,I"], ["139", "PAL,G"] ],
-};
+                                                    "Zweilous": [ [118", "SSP,H"], ["66", "WHT,I"], ["147", "WHT,I"], ["139", "PAL,G"] ]
+},
    "trainer": [
                          ["Academy at Night"],
                          ["Accompanying Flute"],
@@ -2675,7 +2675,7 @@
                          ["Worker"],
                          ["Xerosic's Machinations"],
                          ["Youngster"],
-                         ["Zisu"],
+                         ["Zisu"]
    ],
    "energy": [
                          ["Boomerang Energy"],
@@ -2701,6 +2701,6 @@
                          ["Spiky Energy"],
                          ["Team Rocket's Energy"],
                          ["Therapeutic Energy"],
-                         ["Water Energy"],
-   ],
+                         ["Water Energy"]
+   ]
 }
