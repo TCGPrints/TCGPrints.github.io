@@ -1,1 +1,49 @@
-{}
+{
+  "pokemon": [
+    [" "],
+    ["Abomasnow"],
+    ["Abra"],
+    ["Absol"],
+    ["Alakazam"],
+    ["Charizard ex"],
+    ["Pikachu"],
+    ["Gardevoir"],
+    ["Mew ex"],
+    ["Tinkaton"],
+    ["Chien-Pao ex"]
+  ],
+  "pokemonCollSetReg": {
+    "Abomasnow": [["60", "DRI,I"], ["101", "PAF,G"], ["11", "PAL,G"]],
+    "Abra": [["80", "TWM,H"], ["148", "PAF,G"], ["63", "MEW,G"]],
+    "Absol": [["30", "SFA,H"], ["113", "PAR,G"]],
+    "Alakazam": [["82", "TWM,H"]],
+    "Charizard ex": [["125", "OBF,F"], ["223", "OBF,H"], ["6", "SVE,F"]],
+    "Pikachu": [["52", "SVI,G"], ["160", "PAF,G"], ["65", "TWM,H"]],
+    "Gardevoir": [["86", "SVI,G"], ["101", "PAR,F"]],
+    "Mew ex": [["151", "MEW,H"], ["193", "MEW,G"]],
+    "Tinkaton": [["83", "PAL,G"], ["100", "TWM,H"]],
+    "Chien-Pao ex": [["61", "PAF,F"], ["236", "PAF,H"]]
+  },
+  "trainer": [
+    [" "],
+    ["Acro Bike"],
+    ["Arven"],
+    ["Battle VIP Pass"],
+    ["Boss's Orders"],
+    ["Nest Ball"],
+    ["Ultra Ball"],
+    ["Rare Candy"],
+    ["Iono"],
+    ["Professor's Research"],
+    ["Switch"]
+  ],
+  "energy": [
+    [" "],
+    ["Basic Grass Energy"],
+    ["Basic Fire Energy"],
+    ["Basic Water Energy"],
+    ["Basic Lightning Energy"],
+    ["Basic Psychic Energy"],
+    ["Basic Fighting Energy"]
+  ]
+}
