@@ -1,11 +1,543 @@
-<div id="adobe-dc-view"></div>
-<script src="https://acrobatservices.adobe.com/view-sdk/viewer.js"></script>
-<script type="text/javascript">
-	document.addEventListener("adobe_dc_view_sdk.ready", function(){ 
-		var adobeDCView = new AdobeDC.View({clientId: "4b3e312aff914bf889deea27af95b0fe", divId: "adobe-dc-view"});
-		adobeDCView.previewFile({
-			content:{location: {url: "https://themodernfirm.com/wp-content/uploads/2017/12/Sample-Fillable-PDF.pdf"}},
-			metaData:{fileName: "Bodea Brochure.pdf"}
-		}, {});
-	});
-</script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokémon TCG Decklist</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.25.6/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            .no-print { display: none; }
+            body { margin: 0; }
+            #decklist-container { box-shadow: none; border: none; }
+            @page { margin: 0in; size: A4; }
+            .side-by-side { display: block; }
+        }
+        .dropdown {
+            position: relative;
+            width: 100%;
+        }
+        .dropdown-list {
+            display: none;
+            position: absolute;
+            width: 100%;
+            max-height: 150px;
+            overflow-y: auto;
+            background-color: white;
+            border: 1px solid #ccc;
+            z-index: 10;
+        }
+        .dropdown-list.active {
+            display: block;
+        }
+        .dropdown-option {
+            padding: 2px 5px;
+            cursor: pointer;
+        }
+        .dropdown-option:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body class="bg-gray-200 flex justify-center min-h-screen p-2">
+    <div id="root" className="w-full max-w-3xl"></div>
+    <script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+            if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+                try {
+                    var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                    var firstSheetName = workbook.SheetNames[0];
+                    var worksheet = workbook.Sheets[firstSheetName];
+                    var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                    var filteredData = jsonData.filter(row => row.some(filledCell));
+                    var headerRowIndex = filteredData.findIndex((row, index) =>
+                        row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                    );
+                    if (headerRowIndex === -1 || headerRowIndex > 25) {
+                        headerRowIndex = 0;
+                    }
+                    var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                    csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                    return csv;
+                } catch (e) {
+                    console.error(e);
+                    return "";
+                }
+            }
+            return gk_fileData[filename] || "";
+        }
+    </script>
+    <script type="text/babel">
+        const CustomDropdown = ({ options, value, onChange, section, index }) => {
+            const [isOpen, setIsOpen] = React.useState(false);
+            const [inputValue, setInputValue] = React.useState(value);
+            const inputRef = React.useRef(null);
+
+            const handleToggle = () => {
+                setIsOpen(true);
+                if (inputRef.current) {
+                    inputRef.current.select();
+                }
+            };
+
+            const handleSelect = (option) => {
+                setInputValue(option);
+                onChange(section, index, "name", option);
+                setIsOpen(false);
+            };
+
+            const handleInputChange = (e) => {
+                setInputValue(e.target.value);
+                if (!isOpen) setIsOpen(true);
+            };
+
+            const filteredOptions = options.filter(([name]) =>
+                name.toLowerCase().includes(inputValue.toLowerCase())
+            );
+
+            return (
+                <div className="dropdown">
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={inputValue}
+                        onChange={handleInputChange}
+                        onFocus={handleToggle}
+                        onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+                        className="w-full p-[1.7px] border border-black rounded text-[8.5px]"
+                        placeholder={`Search ${section.charAt(0).toUpperCase() + section.slice(1)}`}
+                    />
+                    <div className={`dropdown-list ${isOpen ? 'active' : ''}`}>
+                        {filteredOptions.map(([name]) => (
+                            <div
+                                key={name}
+                                className="dropdown-option"
+                                onClick={() => handleSelect(name)}
+                            >
+                                {name}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const DecklistForm = () => {
+            const [playerInfo, setPlayerInfo] = React.useState({
+                name: "",
+                id: "",
+                dob: "",
+                division: ""
+            });
+            const [cards, setCards] = React.useState({
+                pokemon: [{ name: "", coll: "", set: "", reg: "", qty: 0 }],
+                trainer: [{ name: "", qty: 0 }],
+                energy: [{ name: "", qty: 0 }]
+            });
+            const [cardData, setCardData] = React.useState({
+                pokemon: [[" "]],
+                pokemonCollSetReg: {},
+                trainer: [[" "]],
+                energy: [[" "]]
+            });
+            const [isLoading, setIsLoading] = React.useState(true);
+            const [error, setError] = React.useState(null);
+
+            // Fetch card data on component mount
+            React.useEffect(() => {
+                setIsLoading(true);
+                fetch("./data/cards.json")
+                    .then((response) => {
+                        if (!response.ok) throw new Error("Failed to fetch card data");
+                        return response.json();
+                    })
+                    .then((data) => {
+                        setCardData(data);
+                        setIsLoading(false);
+                        setError(null);
+                    })
+                    .catch((error) => {
+                        console.error("Error fetching card data:", error);
+                        setError("Failed to load card data. Please try again.");
+                        setIsLoading(false);
+                    });
+            }, []);
+
+            const calculateDivision = (dob) => {
+                if (!dob) return "";
+                const birthYear = new Date(dob).getFullYear();
+                const currentYear = new Date().getFullYear();
+                if (birthYear >= currentYear - 12) return "Junior";
+                if (birthYear >= currentYear - 16 && birthYear <= currentYear - 13) return "Senior";
+                return "Masters";
+            };
+
+            const handlePlayerInfoChange = (field, value) => {
+                const updatedInfo = { ...playerInfo, [field]: value };
+                if (field === "dob") {
+                    updatedInfo.division = calculateDivision(value);
+                }
+                setPlayerInfo(updatedInfo);
+            };
+
+            const handleCardChange = (section, index, field, value) => {
+                const updatedCards = { ...cards };
+                updatedCards[section][index] = { ...updatedCards[section][index], [field]: value };
+
+                if (section === "pokemon" && field === "name") {
+                    updatedCards[section][index].coll = "";
+                    updatedCards[section][index].set = "";
+                    updatedCards[section][index].reg = "";
+                }
+                if (section === "pokemon" && field === "coll") {
+                    const [set, reg] = getSetAndRegulation(updatedCards[section][index].name, value);
+                    updatedCards[section][index].set = set;
+                    updatedCards[section][index].reg = reg;
+                }
+
+                setCards(updatedCards);
+            };
+
+            const getCollNumbers = (pokemonName) => {
+                return cardData.pokemonCollSetReg[pokemonName]?.map(([coll]) => coll) || [""];
+            };
+
+            const getSetAndRegulation = (pokemonName, coll) => {
+                const entry = cardData.pokemonCollSetReg[pokemonName]?.find(([c]) => c === coll);
+                if (entry) {
+                    const [, setReg] = entry;
+                    const [set, reg] = setReg.split(",");
+                    return [set, reg];
+                }
+                return ["", ""];
+            };
+
+            const addRow = (section) => {
+                const updatedCards = { ...cards };
+                if (updatedCards[section].length >= 50) return;
+                const newRow = section === "pokemon"
+                    ? { name: "", coll: "", set: "", reg: "", qty: 0 }
+                    : { name: "", qty: 0 };
+                updatedCards[section] = [...updatedCards[section], newRow];
+                setCards(updatedCards);
+            };
+
+            const removeRow = (section, index) => {
+                const updatedCards = { ...cards };
+                if (updatedCards[section].length <= 1) return;
+                updatedCards[section] = updatedCards[section].filter((_, i) => i !== index);
+                setCards(updatedCards);
+            };
+
+            const totalCards = Object.values(cards).flat().reduce((sum, card) => sum + (Number(card.qty) || 0), 0);
+
+            const loadSampleData = () => {
+                setPlayerInfo({
+                    name: "Ash Ketchum",
+                    id: "123456",
+                    dob: "2010-01-01",
+                    division: "Senior"
+                });
+                setCards({
+                    pokemon: [
+                        { name: "Abomasnow", coll: "60", set: "DRI", reg: "I", qty: 2 },
+                        { name: "Abra", coll: "80", set: "TWM", reg: "H", qty: 3 },
+                        { name: "Charizard ex", coll: "125", set: "OBF", reg: "F", qty: 2 },
+                        { name: "", coll: "", set: "", reg: "", qty: 0 },
+                        { name: "", coll: "", set: "", reg: "", qty: 0 }
+                    ],
+                    trainer: [
+                        { name: "Arven", qty: 2 },
+                        { name: "Boss's Orders", qty: 2 },
+                        { name: "Nest Ball", qty: 4 },
+                        { name: "", qty: 0 },
+                        { name: "", qty: 0 }
+                    ],
+                    energy: [
+                        { name: "Basic Grass Energy", qty: 8 },
+                        { name: "Basic Fire Energy", qty: 4 },
+                        { name: "", qty: 0 },
+                        { name: "", qty: 0 },
+                        { name: "", qty: 0 }
+                    ]
+                });
+            };
+
+            const resetForm = () => {
+                setPlayerInfo({ name: "", id: "", dob: "", division: "" });
+                setCards({
+                    pokemon: [{ name: "", coll: "", set: "", reg: "", qty: 0 }],
+                    trainer: [{ name: "", qty: 0 }],
+                    energy: [{ name: "", qty: 0 }]
+                });
+            };
+
+            const handlePrint = () => {
+                window.print();
+            };
+
+            return (
+                <div id="decklist-container" className="bg-white p-[5.1px] rounded-lg shadow-lg font-sans">
+                    {isLoading && <p className="text-[8.5px] text-center">Loading card data...</p>}
+                    {error && <p className="text-red-600 text-[8.5px] text-center">{error}</p>}
+                    {!isLoading && !error && (
+                        <>
+                            <div className="border-b-2 border-black mb-[6.8px] pb-[1.7px]">
+                                <h1 className="text-[13.5px] font-bold text-center">Pokémon Trading Card Game Deck List</h1>
+                            </div>
+                            <div className="grid grid-cols-[2fr,1fr,2fr,1fr] gap-2 mb-[6.8px]">
+                                <div>
+                                    <label className="block text-[8.5px] font-bold">Player Name:</label>
+                                    <input
+                                        type="text"
+                                        value={playerInfo.name}
+                                        onChange={(e) => handlePlayerInfoChange("name", e.target.value)}
+                                        className="w-full p-[1.7px] border border-black rounded text-[8.5px]"
+                                        placeholder="Enter name"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[8.5px] font-bold">Player ID:</label>
+                                    <input
+                                        type="text"
+                                        value={playerInfo.id}
+                                        onChange={(e) => handlePlayerInfoChange("id", e.target.value)}
+                                        className="w-full p-[1.7px] border border-black rounded text-[8.5px]"
+                                        placeholder="Enter ID"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[8.5px] font-bold">Date of Birth:</label>
+                                    <input
+                                        type="date"
+                                        value={playerInfo.dob}
+                                        onChange={(e) => handlePlayerInfoChange("dob", e.target.value)}
+                                        className="w-full p-[1.7px] border border-black rounded text-[8.5px]"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[8.5px] font-bold">Division:</label>
+                                    <input
+                                        type="text"
+                                        value={playerInfo.division}
+                                        readOnly
+                                        className="w-full p-[1.7px] border border-black rounded bg-gray-100 text-[8.5px]"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mb-[6.8px]">
+                                <h2 className="text-[10.5px] font-bold border-b border-black">Pokémon</h2>
+                                <div className="grid grid-cols-9 gap-1 text-[8.5px] font-bold border-b border-black py-[1.7px]">
+                                    <span>Qty:</span>
+                                    <span className="col-span-4">Name:</span>
+                                    <span>Set:</span>
+                                    <span className="col-span-1">Coll.#:</span>
+                                    <span>Reg:</span>
+                                    <span className="no-print"></span>
+                                </div>
+                                {cards.pokemon.map((card, index) => (
+                                    <div key={`pokemon-${index}`} className="grid grid-cols-9 gap-1 text-[8.5px] border-b border-gray-300 py-[1.7px]">
+                                        <select
+                                            value={card.qty}
+                                            onChange={(e) => handleCardChange("pokemon", index, "qty", e.target.value)}
+                                            className="p-[1.7px] border border-black rounded text-[8.5px]"
+                                        >
+                                            {[0, 1, 2, 3, 4].map((num) => (
+                                                <option key={num} value={num}>{num}</option>
+                                            ))}
+                                        </select>
+                                        <div className="col-span-4">
+                                            <CustomDropdown
+                                                options={cardData.pokemon}
+                                                value={card.name}
+                                                onChange={handleCardChange}
+                                                section="pokemon"
+                                                index={index}
+                                            />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={card.set}
+                                            readOnly
+                                            className="p-[1.7px] border border-black rounded bg-gray-100 text-[8.5px] text-left"
+                                            style={{ paddingLeft: "2px" }}
+                                            placeholder="Set"
+                                        />
+                                        <select
+                                            value={card.coll}
+                                            onChange={(e) => handleCardChange("pokemon", index, "coll", e.target.value)}
+                                            className="col-span-1 p-[1.7px] border border-black rounded text-[8.5px]"
+                                            disabled={!card.name || card.name === " "}
+                                        >
+                                            <option value="">-</option>
+                                            {getCollNumbers(card.name).map((coll) => (
+                                                <option key={coll} value={coll}>{coll}</option>
+                                            ))}
+                                        </select>
+                                        <input
+                                            type="text"
+                                            value={card.reg}
+                                            readOnly
+                                            className="p-[1.7px] border border-black rounded bg-gray-100 text-[8.5px] text-left"
+                                            style={{ paddingLeft: "2px" }}
+                                            placeholder="Reg"
+                                        />
+                                        <button
+                                            onClick={() => removeRow("pokemon", index)}
+                                            className="no-print text-red-600 font-extrabold text-[10.5px]"
+                                            disabled={cards.pokemon.length <= 1}
+                                        >
+                                            X
+                                        </button>
+                                    </div>
+                                ))}
+                                <div className="text-left mt-[3.4px] leading-[0.25]">
+                                    <button
+                                        onClick={() => addRow("pokemon")}
+                                        className="no-print text-green-600 font-extrabold text-[15px]"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="side-by-side grid grid-cols-2 gap-4 mb-[6.8px]">
+                                <div>
+                                    <h2 className="text-[10.5px] font-bold border-b border-black">Trainer</h2>
+                                    <div className="grid grid-cols-9 gap-1 text-[8.5px] font-bold border-b border-black py-[1.7px]">
+                                        <span className="col-span-2">Qty:</span>
+                                        <span className="col-span-6">Name:</span>
+                                        <span className="no-print"></span>
+                                    </div>
+                                    {cards.trainer.map((card, index) => (
+                                        <div key={`trainer-${index}`} className="grid grid-cols-9 gap-1 text-[8.5px] border-b border-gray-300 py-[1.7px]">
+                                            <select
+                                                value={card.qty}
+                                                onChange={(e) => handleCardChange("trainer", index, "qty", e.target.value)}
+                                                className="col-span-2 p-[1.7px] border border-black rounded text-[8.5px]"
+                                            >
+                                                {[0, 1, 2, 3, 4].map((num) => (
+                                                    <option key={num} value={num}>{num}</option>
+                                                ))}
+                                            </select>
+                                            <div className="col-span-6">
+                                                <CustomDropdown
+                                                    options={cardData.trainer}
+                                                    value={card.name}
+                                                    onChange={handleCardChange}
+                                                    section="trainer"
+                                                    index={index}
+                                                />
+                                            </div>
+                                            <button
+                                                onClick={() => removeRow("trainer", index)}
+                                                className="no-print text-red-600 font-extrabold text-[10.5px]"
+                                                disabled={cards.trainer.length <= 1}
+                                            >
+                                                X
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <div className="text-left mt-[3.4px] leading-[0.25]">
+                                        <button
+                                            onClick={() => addRow("trainer")}
+                                            className="no-print text-green-600 font-extrabold text-[15px]"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h2 className="text-[10.5px] font-bold border-b border-black">Energy</h2>
+                                    <div className="grid grid-cols-9 gap-1 text-[8.5px] font-bold border-b border-black py-[1.7px]">
+                                        <span className="col-span-2">Qty:</span>
+                                        <span className="col-span-6">Name:</span>
+                                        <span className="no-print"></span>
+                                    </div>
+                                    {cards.energy.map((card, index) => (
+                                        <div key={`energy-${index}`} className="grid grid-cols-9 gap-1 text-[8.5px] border-b border-gray-300 py-[1.7px]">
+                                            <select
+                                                value={card.qty}
+                                                onChange={(e) => handleCardChange("energy", index, "qty", e.target.value)}
+                                                className="col-span-2 p-[1.7px] border border-black rounded text-[8.5px]"
+                                            >
+                                                {[...Array(60).keys()].map((num) => (
+                                                    <option key={num} value={num}>{num}</option>
+                                                ))}
+                                            </select>
+                                            <div className="col-span-6">
+                                                <CustomDropdown
+                                                    options={cardData.energy}
+                                                    value={card.name}
+                                                    onChange={handleCardChange}
+                                                    section="energy"
+                                                    index={index}
+                                                />
+                                            </div>
+                                            <button
+                                                onClick={() => removeRow("energy", index)}
+                                                className="no-print text-red-600 font-extrabold text-[10.5px]"
+                                                disabled={cards.energy.length <= 1}
+                                            >
+                                                X
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <div className="text-left mt-[3.4px] leading-[0.15]">
+                                        <button
+                                            onClick={() => addRow("energy")}
+                                            className="no-print text-green-600 font-extrabold text-[15px]"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between items-center mt-[6.8px]">
+                                <div>
+                                    <p className="text-[8.5px] font-bold">Total Cards: {totalCards}</p>
+                                </div>
+                                <div className="flex gap-2 no-print">
+                                    <button
+                                        onClick={loadSampleData}
+                                        className="no-print bg-blue-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-blue-700 text-[8.5px]"
+                                    >
+                                        Load Sample
+                                    </button>
+                                    <button
+                                        onClick={resetForm}
+                                        className="no-print bg-red-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-red-700 text-[8.5px]"
+                                    >
+                                        Reset
+                                    </button>
+                                    <button
+                                        onClick={handlePrint}
+                                        className="no-print bg-green-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-green-700 text-[8.5px]"
+                                    >
+                                        Print
+                                    </button>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById("root"));
+        root.render(<DecklistForm />);
+    </script>
+</body>
+</html>
