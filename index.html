@@ -44,38 +44,6 @@
 </head>
 <body class="bg-gray-200 flex justify-center min-h-screen p-2">
     <div id="root" className="w-full max-w-3xl"></div>
-    <script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-            if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-                try {
-                    var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                    var firstSheetName = workbook.SheetNames[0];
-                    var worksheet = workbook.Sheets[firstSheetName];
-                    var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                    var filteredData = jsonData.filter(row => row.some(filledCell));
-                    var headerRowIndex = filteredData.findIndex((row, index) =>
-                        row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                    );
-                    if (headerRowIndex === -1 || headerRowIndex > 25) {
-                        headerRowIndex = 0;
-                    }
-                    var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
-                    csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                    return csv;
-                } catch (e) {
-                    console.error(e);
-                    return "";
-                }
-            }
-            return gk_fileData[filename] || "";
-        }
-    </script>
     <script type="text/babel">
         const CustomDropdown = ({ options, value, onChange, section, index }) => {
             const [isOpen, setIsOpen] = React.useState(false);
@@ -101,7 +69,7 @@
             };
 
             const filteredOptions = options.filter(([name]) =>
-                name.toLowerCase().includes(inputValue.toLowerCase())
+                name.toLowerCase().startsWith(inputValue.toLowerCase())
             );
 
             return (
@@ -139,9 +107,9 @@
                 division: ""
             });
             const [cards, setCards] = React.useState({
-                pokemon: [{ name: "", coll: "", set: "", reg: "", qty: 0 }],
-                trainer: [{ name: "", qty: 0 }],
-                energy: [{ name: "", qty: 0 }]
+                pokemon: [{ id: Date.now(), name: "", coll: "", set: "", reg: "", qty: 0 }],
+                trainer: [{ id: Date.now() + 1, name: "", qty: 0 }],
+                energy: [{ id: Date.now() + 2, name: "", qty: 0 }]
             });
             const [cardData, setCardData] = React.useState({
                 pokemon: [[" "]],
@@ -151,8 +119,23 @@
             });
             const [isLoading, setIsLoading] = React.useState(true);
             const [error, setError] = React.useState(null);
+            const [showImportModal, setShowImportModal] = React.useState(false);
+            const [importText, setImportText] = React.useState("");
+            const fileInputRef = React.useRef(null);
 
-            // Fetch card data on component mount
+            const energyMap = {
+                "Basic {D} Energy": "Darkness Energy",
+                "Basic {R} Energy": "Fire Energy",
+                "Basic {G} Energy": "Grass Energy",
+                "Basic {W} Energy": "Water Energy",
+                "Basic {L} Energy": "Lightning Energy",
+                "Basic {P} Energy": "Psychic Energy",
+                "Basic {F} Energy": "Fighting Energy",
+                "Basic {M} Energy": "Metal Energy"
+            };
+
+            const generateId = () => Date.now() + Math.random();
+
             React.useEffect(() => {
                 setIsLoading(true);
                 fetch("./data/cards.json")
@@ -161,14 +144,23 @@
                         return response.json();
                     })
                     .then((data) => {
+                        if (!data.pokemon || !data.pokemonCollSetReg || !data.trainer || !data.energy) {
+                            throw new Error("Invalid card data format");
+                        }
                         setCardData(data);
                         setIsLoading(false);
                         setError(null);
                     })
                     .catch((error) => {
                         console.error("Error fetching card data:", error);
-                        setError("Failed to load card data. Please try again.");
+                        setError("Failed to load card data. Please ensure cards.json is accessible and try again.");
                         setIsLoading(false);
+                        setCardData({
+                            pokemon: [[" "]],
+                            pokemonCollSetReg: {},
+                            trainer: [[" "]],
+                            energy: [[" "]]
+                        });
                     });
             }, []);
 
@@ -189,19 +181,21 @@
                 setPlayerInfo(updatedInfo);
             };
 
-            const handleCardChange = (section, index, field, value) => {
+            const handleCardChange = (section, id, field, value) => {
                 const updatedCards = { ...cards };
-                updatedCards[section][index] = { ...updatedCards[section][index], [field]: value };
+                const rowIndex = updatedCards[section].findIndex(card => card.id === id);
+                if (rowIndex === -1) return;
+                updatedCards[section][rowIndex] = { ...updatedCards[section][rowIndex], [field]: value };
 
                 if (section === "pokemon" && field === "name") {
-                    updatedCards[section][index].coll = "";
-                    updatedCards[section][index].set = "";
-                    updatedCards[section][index].reg = "";
+                    updatedCards[section][rowIndex].coll = "";
+                    updatedCards[section][rowIndex].set = "";
+                    updatedCards[section][rowIndex].reg = "";
                 }
                 if (section === "pokemon" && field === "coll") {
-                    const [set, reg] = getSetAndRegulation(updatedCards[section][index].name, value);
-                    updatedCards[section][index].set = set;
-                    updatedCards[section][index].reg = reg;
+                    const [set, reg] = getSetAndRegulation(updatedCards[section][rowIndex].name, value);
+                    updatedCards[section][rowIndex].set = set;
+                    updatedCards[section][rowIndex].reg = reg;
                 }
 
                 setCards(updatedCards);
@@ -225,59 +219,328 @@
                 const updatedCards = { ...cards };
                 if (updatedCards[section].length >= 50) return;
                 const newRow = section === "pokemon"
-                    ? { name: "", coll: "", set: "", reg: "", qty: 0 }
-                    : { name: "", qty: 0 };
+                    ? { id: generateId(), name: "", coll: "", set: "", reg: "", qty: 0 }
+                    : { id: generateId(), name: "", qty: 0 };
                 updatedCards[section] = [...updatedCards[section], newRow];
                 setCards(updatedCards);
             };
 
-            const removeRow = (section, index) => {
+            const removeRow = (section, id) => {
                 const updatedCards = { ...cards };
                 if (updatedCards[section].length <= 1) return;
-                updatedCards[section] = updatedCards[section].filter((_, i) => i !== index);
+                updatedCards[section] = updatedCards[section].filter(card => card.id !== id);
                 setCards(updatedCards);
+            };
+
+            const handleExport = () => {
+                const fileName = window.prompt("Enter file name for export", "decklist.txt");
+                if (!fileName) return; // Do nothing if canceled
+                const sanitizedFileName = fileName.endsWith(".txt") ? fileName : `${fileName}.txt`;
+                const pokemonText = cards.pokemon
+                    .filter(card => card.qty > 0 && card.name)
+                    .map(card => `${card.qty}, ${card.name}, ${card.coll}, ${card.set}, ${card.reg}`)
+                    .join("\n");
+                const trainerText = cards.trainer
+                    .filter(card => card.qty > 0 && card.name)
+                    .map(card => `${card.qty}, ${card.name}`)
+                    .join("\n");
+                const energyText = cards.energy
+                    .filter(card => card.qty > 0 && card.name)
+                    .map(card => `${card.qty}, ${card.name}`)
+                    .join("\n");
+                const total = Object.values(cards).flat().reduce((sum, card) => sum + (Number(card.qty) || 0), 0);
+                const content = `Pokémon:\n${pokemonText}\nTrainer:\n${trainerText}\nEnergy:\n${energyText}\nTotal Cards: ${total}`;
+                const blob = new Blob([content], { type: "text/plain" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = sanitizedFileName;
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            const parsePTCGLText = (text) => {
+                const lines = text.split("\n").map(line => line.trim());
+                let currentSection = null;
+                const pokemon = [];
+                const trainer = [];
+                const energy = [];
+                const invalidSets = [];
+
+                for (const line of lines) {
+                    if (line.startsWith("Pokémon:")) {
+                        currentSection = "pokemon";
+                        continue;
+                    } else if (line.startsWith("Trainer:")) {
+                        currentSection = "trainer";
+                        continue;
+                    } else if (line.startsWith("Energy:")) {
+                        currentSection = "energy";
+                        continue;
+                    } else if (line.startsWith("Total Cards:") || !line) {
+                        continue;
+                    }
+
+                    const tokens = line.split(" ");
+                    if (tokens.length < 2) {
+                        console.warn(`Skipping malformed line: ${line}`);
+                        continue;
+                    }
+                    const qtyMatch = tokens[0].match(/^\d+$/);
+                    if (!qtyMatch) {
+                        console.warn(`Invalid quantity in line: ${line}`);
+                        continue;
+                    }
+                    const qty = parseInt(qtyMatch[0]);
+                    let coll = "";
+                    let set = "";
+                    let nameIndex = 1;
+                    for (let i = tokens.length - 1; i >= 1; i--) {
+                        if (tokens[i].match(/^\d+$/)) {
+                            coll = tokens[i];
+                            set = tokens[i - 1];
+                            nameIndex = i - 1;
+                            break;
+                        }
+                    }
+                    const name = tokens.slice(1, nameIndex).join(" ");
+                    if (!name) {
+                        console.warn(`Empty name in line: ${line}`);
+                        continue;
+                    }
+
+                    if (currentSection === "pokemon") {
+                        pokemon.push({ qty, name, coll, set });
+                    } else if (currentSection === "trainer" || currentSection === "energy") {
+                        const mappedName = currentSection === "energy" ? (energyMap[name] || name) : name;
+                        if (!cardData[currentSection].some(([item]) => item === mappedName)) {
+                            console.warn(`Invalid ${currentSection} name: ${mappedName}`);
+                            continue;
+                        }
+                        (currentSection === "trainer" ? trainer : energy).push({ qty, name: mappedName });
+                    }
+                }
+
+                // Process Pokémon: Merge valid and invalid sets
+                const pokemonMap = {};
+                for (const card of pokemon) {
+                    if (!pokemonMap[card.name]) {
+                        pokemonMap[card.name] = { valid: [], invalid: [] };
+                    }
+                    const entry = cardData.pokemonCollSetReg[card.name]?.find(([c]) => c === card.coll);
+                    if (entry && cardData.pokemon.some(([p]) => p === card.name)) {
+                        pokemonMap[card.name].valid.push(card);
+                    } else {
+                        pokemonMap[card.name].invalid.push(card);
+                        invalidSets.push(`${card.qty} ${card.name} ${card.set} ${card.coll}`);
+                    }
+                }
+                const parsedPokemon = [];
+                for (const name in pokemonMap) {
+                    const { valid, invalid } = pokemonMap[name];
+                    const validMap = {};
+                    for (const card of valid) {
+                        const key = `${card.set}-${card.coll}`;
+                        if (!validMap[key]) {
+                            validMap[key] = { qty: 0, coll: card.coll, set: card.set };
+                        }
+                        validMap[key].qty += card.qty;
+                    }
+                    for (const key in validMap) {
+                        const { qty, coll, set } = validMap[key];
+                        const [setVal, reg] = getSetAndRegulation(name, coll);
+                        parsedPokemon.push({ id: generateId(), qty: Math.min(qty, 4), name, coll, set: setVal, reg });
+                    }
+                    const invalidQty = invalid.reduce((sum, card) => sum + card.qty, 0);
+                    if (invalidQty > 0) {
+                        parsedPokemon.push({ id: generateId(), qty: Math.min(invalidQty, 4), name, coll: "", set: "", reg: "" });
+                    }
+                }
+
+                // Process Trainer: Combine duplicates
+                const trainerMap = {};
+                for (const card of trainer) {
+                    trainerMap[card.name] = (trainerMap[card.name] || 0) + card.qty;
+                }
+                const parsedTrainer = Object.entries(trainerMap).map(([name, qty]) => ({
+                    id: generateId(),
+                    qty: Math.min(qty, 4),
+                    name
+                }));
+
+                // Process Energy: Combine duplicates
+                const energyMapCounts = {};
+                for (const card of energy) {
+                    energyMapCounts[card.name] = (energyMapCounts[card.name] || 0) + card.qty;
+                }
+                const parsedEnergy = Object.entries(energyMapCounts).map(([name, qty]) => ({
+                    id: generateId(),
+                    qty: Math.min(qty, 60),
+                    name
+                }));
+
+                return { pokemon: parsedPokemon, trainer: parsedTrainer, energy: parsedEnergy, invalidSets };
+            };
+
+            const handleImportFile = () => {
+                if (fileInputRef.current) {
+                    fileInputRef.current.click();
+                }
+            };
+
+            const handleFileUpload = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                if (!window.confirm("Replace current decklist?")) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const text = e.target.result;
+                    const lines = text.split("\n").map(line => line.trim());
+                    let currentSection = null;
+                    const pokemon = [];
+                    const trainer = [];
+                    const energy = [];
+                    const invalidSets = [];
+
+                    for (const line of lines) {
+                        if (line.startsWith("Pokémon:")) {
+                            currentSection = "pokemon";
+                            continue;
+                        } else if (line.startsWith("Trainer:")) {
+                            currentSection = "trainer";
+                            continue;
+                        } else if (line.startsWith("Energy:")) {
+                            currentSection = "energy";
+                            continue;
+                        } else if (line.startsWith("Total Cards:") || !line) {
+                            continue;
+                        }
+
+                        if (currentSection === "pokemon") {
+                            const [qty, name, coll, set, reg] = line.split(",").map(item => item.trim());
+                            if (!name || isNaN(qty)) {
+                                console.warn(`Invalid Pokémon line: ${line}`);
+                                continue;
+                            }
+                            if (!cardData.pokemon.some(([p]) => p === name)) {
+                                console.warn(`Invalid Pokémon name: ${name}`);
+                                continue;
+                            }
+                            pokemon.push({ qty: parseInt(qty), name, coll, set, reg });
+                        } else if (currentSection === "trainer" || currentSection === "energy") {
+                            const [qty, name] = line.split(",").map(item => item.trim());
+                            if (!name || isNaN(qty)) {
+                                console.warn(`Invalid ${currentSection} line: ${line}`);
+                                continue;
+                            }
+                            const mappedName = currentSection === "energy" ? (energyMap[name] || name) : name;
+                            if (!cardData[currentSection].some(([item]) => item === mappedName)) {
+                                console.warn(`Invalid ${currentSection} name: ${mappedName}`);
+                                continue;
+                            }
+                            (currentSection === "trainer" ? trainer : energy).push({ qty: parseInt(qty), name: mappedName });
+                        }
+                    }
+
+                    // Process Pokémon: Merge duplicates, validate sets
+                    const pokemonMap = {};
+                    for (const card of pokemon) {
+                        if (!pokemonMap[card.name]) {
+                            pokemonMap[card.name] = { valid: [], invalid: [] };
+                        }
+                        const entry = cardData.pokemonCollSetReg[card.name]?.find(([c]) => c === card.coll);
+                        if (entry) {
+                            pokemonMap[card.name].valid.push(card);
+                        } else {
+                            pokemonMap[card.name].invalid.push(card);
+                            invalidSets.push(`${card.qty} ${card.name} ${card.set} ${card.coll}`);
+                        }
+                    }
+                    const parsedPokemon = [];
+                    for (const name in pokemonMap) {
+                        const { valid, invalid } = pokemonMap[name];
+                        const validMap = {};
+                        for (const card of valid) {
+                            const key = `${card.set}-${card.coll}`;
+                            if (!validMap[key]) {
+                                validMap[key] = { qty: 0, coll: card.coll, set: card.set, reg: card.reg };
+                            }
+                            validMap[key].qty += card.qty;
+                        }
+                        for (const key in validMap) {
+                            const { qty, coll, set, reg } = validMap[key];
+                            parsedPokemon.push({ id: generateId(), qty: Math.min(qty, 4), name, coll, set, reg });
+                        }
+                        const invalidQty = invalid.reduce((sum, card) => sum + card.qty, 0);
+                        if (invalidQty > 0) {
+                            parsedPokemon.push({ id: generateId(), qty: Math.min(invalidQty, 4), name, coll: "", set: "", reg: "" });
+                        }
+                    }
+
+                    // Process Trainer: Combine duplicates
+                    const trainerMap = {};
+                    for (const card of trainer) {
+                        trainerMap[card.name] = (trainerMap[card.name] || 0) + card.qty;
+                    }
+                    const parsedTrainer = Object.entries(trainerMap).map(([name, qty]) => ({
+                        id: generateId(),
+                        qty: Math.min(qty, 4),
+                        name
+                    }));
+
+                    // Process Energy: Combine duplicates
+                    const energyMapCounts = {};
+                    for (const card of energy) {
+                        energyMapCounts[card.name] = (energyMapCounts[card.name] || 0) + card.qty;
+                    }
+                    const parsedEnergy = Object.entries(energyMapCounts).map(([name, qty]) => ({
+                        id: generateId(),
+                        qty: Math.min(qty, 60),
+                        name
+                    }));
+
+                    if (parsedPokemon.length === 0 && parsedTrainer.length === 0 && parsedEnergy.length === 0) {
+                        alert("Invalid format: no valid cards found.");
+                        return;
+                    }
+
+                    setCards({ pokemon: parsedPokemon, trainer: parsedTrainer, energy: parsedEnergy });
+                    setShowImportModal(false);
+                    setImportText("");
+                    if (invalidSets.length > 0) {
+                        window.alert(`Invalid sets detected for the following Pokémon:\n${invalidSets.join("\n")}`);
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            const handleImportText = () => {
+                if (!importText) {
+                    alert("Please paste PTCGL text to import.");
+                    return;
+                }
+                if (!window.confirm("Replace current decklist?")) return;
+                const { pokemon, trainer, energy, invalidSets } = parsePTCGLText(importText);
+                if (pokemon.length === 0 && trainer.length === 0 && energy.length === 0) {
+                    alert("Invalid format: no valid cards found.");
+                    return;
+                }
+                setCards({ pokemon, trainer, energy });
+                setShowImportModal(false);
+                setImportText("");
+                if (invalidSets.length > 0) {
+                    window.alert(`Invalid sets detected for the following Pokémon:\n${invalidSets.join("\n")}`);
+                }
             };
 
             const totalCards = Object.values(cards).flat().reduce((sum, card) => sum + (Number(card.qty) || 0), 0);
 
-            const loadSampleData = () => {
-                setPlayerInfo({
-                    name: "Ash Ketchum",
-                    id: "123456",
-                    dob: "2010-01-01",
-                    division: "Senior"
-                });
-                setCards({
-                    pokemon: [
-                        { name: "Abomasnow", coll: "60", set: "DRI", reg: "I", qty: 2 },
-                        { name: "Abra", coll: "80", set: "TWM", reg: "H", qty: 3 },
-                        { name: "Charizard ex", coll: "125", set: "OBF", reg: "F", qty: 2 },
-                        { name: "", coll: "", set: "", reg: "", qty: 0 },
-                        { name: "", coll: "", set: "", reg: "", qty: 0 }
-                    ],
-                    trainer: [
-                        { name: "Arven", qty: 2 },
-                        { name: "Boss's Orders", qty: 2 },
-                        { name: "Nest Ball", qty: 4 },
-                        { name: "", qty: 0 },
-                        { name: "", qty: 0 }
-                    ],
-                    energy: [
-                        { name: "Basic Grass Energy", qty: 8 },
-                        { name: "Basic Fire Energy", qty: 4 },
-                        { name: "", qty: 0 },
-                        { name: "", qty: 0 },
-                        { name: "", qty: 0 }
-                    ]
-                });
-            };
-
             const resetForm = () => {
                 setPlayerInfo({ name: "", id: "", dob: "", division: "" });
                 setCards({
-                    pokemon: [{ name: "", coll: "", set: "", reg: "", qty: 0 }],
-                    trainer: [{ name: "", qty: 0 }],
-                    energy: [{ name: "", qty: 0 }]
+                    pokemon: [{ id: generateId(), name: "", coll: "", set: "", reg: "", qty: 0 }],
+                    trainer: [{ id: generateId(), name: "", qty: 0 }],
+                    energy: [{ id: generateId(), name: "", qty: 0 }]
                 });
             };
 
@@ -345,11 +608,11 @@
                                     <span>Reg:</span>
                                     <span className="no-print"></span>
                                 </div>
-                                {cards.pokemon.map((card, index) => (
-                                    <div key={`pokemon-${index}`} className="grid grid-cols-9 gap-1 text-[8.5px] border-b border-gray-300 py-[1.7px]">
+                                {cards.pokemon.map((card) => (
+                                    <div key={card.id} className="grid grid-cols-9 gap-1 text-[8.5px] border-b border-gray-300 py-[1.7px]">
                                         <select
                                             value={card.qty}
-                                            onChange={(e) => handleCardChange("pokemon", index, "qty", e.target.value)}
+                                            onChange={(e) => handleCardChange("pokemon", card.id, "qty", e.target.value)}
                                             className="p-[1.7px] border border-black rounded text-[8.5px]"
                                         >
                                             {[0, 1, 2, 3, 4].map((num) => (
@@ -362,7 +625,7 @@
                                                 value={card.name}
                                                 onChange={handleCardChange}
                                                 section="pokemon"
-                                                index={index}
+                                                index={card.id}
                                             />
                                         </div>
                                         <input
@@ -375,7 +638,7 @@
                                         />
                                         <select
                                             value={card.coll}
-                                            onChange={(e) => handleCardChange("pokemon", index, "coll", e.target.value)}
+                                            onChange={(e) => handleCardChange("pokemon", card.id, "coll", e.target.value)}
                                             className="col-span-1 p-[1.7px] border border-black rounded text-[8.5px]"
                                             disabled={!card.name || card.name === " "}
                                         >
@@ -393,7 +656,7 @@
                                             placeholder="Reg"
                                         />
                                         <button
-                                            onClick={() => removeRow("pokemon", index)}
+                                            onClick={() => removeRow("pokemon", card.id)}
                                             className="no-print text-red-600 font-extrabold text-[10.5px]"
                                             disabled={cards.pokemon.length <= 1}
                                         >
@@ -419,11 +682,11 @@
                                         <span className="col-span-6">Name:</span>
                                         <span className="no-print"></span>
                                     </div>
-                                    {cards.trainer.map((card, index) => (
-                                        <div key={`trainer-${index}`} className="grid grid-cols-9 gap-1 text-[8.5px] border-b border-gray-300 py-[1.7px]">
+                                    {cards.trainer.map((card) => (
+                                        <div key={card.id} className="grid grid-cols-9 gap-1 text-[8.5px] border-b border-gray-300 py-[1.7px]">
                                             <select
                                                 value={card.qty}
-                                                onChange={(e) => handleCardChange("trainer", index, "qty", e.target.value)}
+                                                onChange={(e) => handleCardChange("trainer", card.id, "qty", e.target.value)}
                                                 className="col-span-2 p-[1.7px] border border-black rounded text-[8.5px]"
                                             >
                                                 {[0, 1, 2, 3, 4].map((num) => (
@@ -436,11 +699,11 @@
                                                     value={card.name}
                                                     onChange={handleCardChange}
                                                     section="trainer"
-                                                    index={index}
+                                                    index={card.id}
                                                 />
                                             </div>
                                             <button
-                                                onClick={() => removeRow("trainer", index)}
+                                                onClick={() => removeRow("trainer", card.id)}
                                                 className="no-print text-red-600 font-extrabold text-[10.5px]"
                                                 disabled={cards.trainer.length <= 1}
                                             >
@@ -465,11 +728,11 @@
                                         <span className="col-span-6">Name:</span>
                                         <span className="no-print"></span>
                                     </div>
-                                    {cards.energy.map((card, index) => (
-                                        <div key={`energy-${index}`} className="grid grid-cols-9 gap-1 text-[8.5px] border-b border-gray-300 py-[1.7px]">
+                                    {cards.energy.map((card) => (
+                                        <div key={card.id} className="grid grid-cols-9 gap-1 text-[8.5px] border-b border-gray-300 py-[1.7px]">
                                             <select
                                                 value={card.qty}
-                                                onChange={(e) => handleCardChange("energy", index, "qty", e.target.value)}
+                                                onChange={(e) => handleCardChange("energy", card.id, "qty", e.target.value)}
                                                 className="col-span-2 p-[1.7px] border border-black rounded text-[8.5px]"
                                             >
                                                 {[...Array(60).keys()].map((num) => (
@@ -482,11 +745,11 @@
                                                     value={card.name}
                                                     onChange={handleCardChange}
                                                     section="energy"
-                                                    index={index}
+                                                    index={card.id}
                                                 />
                                             </div>
                                             <button
-                                                onClick={() => removeRow("energy", index)}
+                                                onClick={() => removeRow("energy", card.id)}
                                                 className="no-print text-red-600 font-extrabold text-[10.5px]"
                                                 disabled={cards.energy.length <= 1}
                                             >
@@ -511,16 +774,22 @@
                                 </div>
                                 <div className="flex gap-2 no-print">
                                     <button
-                                        onClick={loadSampleData}
-                                        className="no-print bg-blue-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-blue-700 text-[8.5px]"
-                                    >
-                                        Load Sample
-                                    </button>
-                                    <button
                                         onClick={resetForm}
                                         className="no-print bg-red-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-red-700 text-[8.5px]"
                                     >
                                         Reset
+                                    </button>
+                                    <button
+                                        onClick={() => setShowImportModal(true)}
+                                        className="no-print bg-blue-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-blue-700 text-[8.5px]"
+                                    >
+                                        Import
+                                    </button>
+                                    <button
+                                        onClick={handleExport}
+                                        className="no-print bg-blue-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-blue-700 text-[8.5px]"
+                                    >
+                                        Export
                                     </button>
                                     <button
                                         onClick={handlePrint}
@@ -530,6 +799,47 @@
                                     </button>
                                 </div>
                             </div>
+
+                            {showImportModal && (
+                                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                    <div className="bg-white p-4 rounded-lg shadow-lg max-w-md mx-auto">
+                                        <h2 className="text-[10.5px] font-bold mb-2">Import Decklist</h2>
+                                        <textarea
+                                            value={importText}
+                                            onChange={(e) => setImportText(e.target.value)}
+                                            className="w-full h-32 p-2 border border-black rounded text-[8.5px] mb-2"
+                                            placeholder="Paste PTCGL export text or leave blank to upload a file"
+                                        />
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={handleImportFile}
+                                                className="bg-blue-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-blue-700 text-[8.5px]"
+                                            >
+                                                Import File
+                                            </button>
+                                            <button
+                                                onClick={handleImportText}
+                                                className="bg-blue-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-blue-700 text-[8.5px]"
+                                            >
+                                                Import Text
+                                            </button>
+                                            <button
+                                                onClick={() => { setShowImportModal(false); setImportText(""); }}
+                                                className="bg-gray-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-gray-700 text-[8.5px]"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept=".txt"
+                                            ref={fileInputRef}
+                                            onChange={handleFileUpload}
+                                            className="hidden"
+                                        />
+                                    </div>
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
