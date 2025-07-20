@@ -81,7 +81,7 @@
                         onChange={handleInputChange}
                         onFocus={handleToggle}
                         onBlur={() => setTimeout(() => setIsOpen(false), 200)}
-                        className="w-full p-[1.7px] border border-black rounded text-[12px]"
+                        className="w-full p-[1.7px] border border-black rounded text-[11px]"
                         placeholder={`Search ${section.charAt(0).toUpperCase() + section.slice(1)}`}
                     />
                     <div className={`dropdown-list ${isOpen ? 'active' : ''}`}>
@@ -553,8 +553,8 @@
 
             return (
                 <div id="decklist-container" className="bg-white p-[5.1px] rounded-lg shadow-lg font-sans">
-                    {isLoading && <p className="text-[12px] text-center">Loading card data...</p>}
-                    {error && <p className="text-red-600 text-[12px] text-center">{error}</p>}
+                    {isLoading && <p className="text-[11px] text-center">Loading card data...</p>}
+                    {error && <p className="text-red-600 text-[11px] text-center">{error}</p>}
                     {!isLoading && !error && (
                         <>
                             <div className="border-b-2 border-black mb-[6.8px] pb-[1.7px]">
@@ -562,48 +562,48 @@
                             </div>
                             <div className="grid grid-cols-[2fr,1fr,2fr,1fr] gap-2 mb-[6.8px]">
                                 <div>
-                                    <label className="block text-[12px] font-bold">Player Name:</label>
+                                    <label className="block text-[11px] font-bold">Player Name:</label>
                                     <input
                                         type="text"
                                         value={playerInfo.name}
                                         onChange={(e) => handlePlayerInfoChange("name", e.target.value)}
-                                        className="w-full p-[1.7px] border border-black rounded text-[12px]"
+                                        className="w-full p-[1.7px] border border-black rounded text-[11px]"
                                         placeholder="Enter name"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[12px] font-bold">Player ID:</label>
+                                    <label className="block text-[11px] font-bold">Player ID:</label>
                                     <input
                                         type="text"
                                         value={playerInfo.id}
                                         onChange={(e) => handlePlayerInfoChange("id", e.target.value)}
-                                        className="w-full p-[1.7px] border border-black rounded text-[12px]"
+                                        className="w-full p-[1.7px] border border-black rounded text-[11px]"
                                         placeholder="Enter ID"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[12px] font-bold">Date of Birth:</label>
+                                    <label className="block text-[11px] font-bold">Date of Birth:</label>
                                     <input
                                         type="date"
                                         value={playerInfo.dob}
                                         onChange={(e) => handlePlayerInfoChange("dob", e.target.value)}
-                                        className="w-full p-[1.7px] border border-black rounded text-[12px]"
+                                        className="w-full p-[1.7px] border border-black rounded text-[11px]"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[12px] font-bold">Division:</label>
+                                    <label className="block text-[11px] font-bold">Division:</label>
                                     <input
                                         type="text"
                                         value={playerInfo.division}
                                         readOnly
-                                        className="w-full p-[1.7px] border border-black rounded bg-gray-100 text-[12px]"
+                                        className="w-full p-[1.7px] border border-black rounded bg-gray-100 text-[11px]"
                                     />
                                 </div>
                             </div>
 
                             <div className="mb-[6.8px]">
-                                <h2 className="text-[10.5px] font-bold border-b border-black">Pokémon: {pokemonCount}</h2>
-                                <div className="grid grid-cols-9 gap-1 text-[12px] font-bold border-b border-black py-[1.7px]">
+                                <h2 className="text-[12px] font-bold border-b border-black">Pokémon: {pokemonCount}</h2>
+                                <div className="grid grid-cols-9 gap-1 text-[11px] font-bold border-b border-black py-[1.7px]">
                                     <span>Qty:</span>
                                     <span className="col-span-4">Name:</span>
                                     <span>Set:</span>
@@ -612,11 +612,11 @@
                                     <span className="no-print"></span>
                                 </div>
                                 {cards.pokemon.map((card) => (
-                                    <div key={card.id} className="grid grid-cols-9 gap-1 text-[12px] border-b border-gray-300 py-[1.7px]">
+                                    <div key={card.id} className="grid grid-cols-9 gap-1 text-[11px] border-b border-gray-300 py-[1.7px]">
                                         <select
                                             value={card.qty}
                                             onChange={(e) => handleCardChange("pokemon", card.id, "qty", e.target.value)}
-                                            className="p-[1.7px] border border-black rounded text-[12px]"
+                                            className="p-[1.7px] border border-black rounded text-[11px]"
                                         >
                                             {[0, 1, 2, 3, 4].map((num) => (
                                                 <option key={num} value={num}>{num}</option>
@@ -635,14 +635,14 @@
                                             type="text"
                                             value={card.set}
                                             readOnly
-                                            className="p-[1.7px] border border-black rounded bg-gray-100 text-[12px] text-left"
+                                            className="p-[1.7px] border border-black rounded bg-gray-100 text-[11px] text-left"
                                             style={{ paddingLeft: "2px" }}
                                             placeholder="Set"
                                         />
                                         <select
                                             value={card.coll}
                                             onChange={(e) => handleCardChange("pokemon", card.id, "coll", e.target.value)}
-                                            className="col-span-1 p-[1.7px] border border-black rounded text-[12px]"
+                                            className="col-span-1 p-[1.7px] border border-black rounded text-[11px]"
                                             disabled={!card.name || card.name === " "}
                                         >
                                             <option value="">-</option>
@@ -654,13 +654,13 @@
                                             type="text"
                                             value={card.reg}
                                             readOnly
-                                            className="p-[1.7px] border border-black rounded bg-gray-100 text-[12px] text-left"
+                                            className="p-[1.7px] border border-black rounded bg-gray-100 text-[11px] text-left"
                                             style={{ paddingLeft: "2px" }}
                                             placeholder="Reg"
                                         />
                                         <button
                                             onClick={() => removeRow("pokemon", card.id)}
-                                            className="no-print text-red-600 font-extrabold text-[10.5px]"
+                                            className="no-print text-red-600 font-extrabold text-[12px]"
                                             disabled={cards.pokemon.length <= 1}
                                         >
                                             X
@@ -679,18 +679,18 @@
 
                             <div className="side-by-side grid grid-cols-2 gap-4 mb-[6.8px]">
                                 <div>
-                                    <h2 className="text-[10.5px] font-bold border-b border-black">Trainer: {trainerCount}</h2>
-                                    <div className="grid grid-cols-9 gap-1 text-[12px] font-bold border-b border-black py-[1.7px]">
+                                    <h2 className="text-[12px] font-bold border-b border-black">Trainer: {trainerCount}</h2>
+                                    <div className="grid grid-cols-9 gap-1 text-[11px] font-bold border-b border-black py-[1.7px]">
                                         <span className="col-span-2">Qty:</span>
                                         <span className="col-span-6">Name:</span>
                                         <span className="no-print"></span>
                                     </div>
                                     {cards.trainer.map((card) => (
-                                        <div key={card.id} className="grid grid-cols-9 gap-1 text-[12px] border-b border-gray-300 py-[1.7px]">
+                                        <div key={card.id} className="grid grid-cols-9 gap-1 text-[11px] border-b border-gray-300 py-[1.7px]">
                                             <select
                                                 value={card.qty}
                                                 onChange={(e) => handleCardChange("trainer", card.id, "qty", e.target.value)}
-                                                className="col-span-2 p-[1.7px] border border-black rounded text-[12px]"
+                                                className="col-span-2 p-[1.7px] border border-black rounded text-[11px]"
                                             >
                                                 {[0, 1, 2, 3, 4].map((num) => (
                                                     <option key={num} value={num}>{num}</option>
@@ -707,7 +707,7 @@
                                             </div>
                                             <button
                                                 onClick={() => removeRow("trainer", card.id)}
-                                                className="no-print text-red-600 font-extrabold text-[10.5px]"
+                                                className="no-print text-red-600 font-extrabold text-[12px]"
                                                 disabled={cards.trainer.length <= 1}
                                             >
                                                 X
@@ -725,18 +725,18 @@
                                 </div>
 
                                 <div>
-                                    <h2 className="text-[10.5px] font-bold border-b border-black">Energy: {energyCount}</h2>
-                                    <div className="grid grid-cols-9 gap-1 text-[12px] font-bold border-b border-black py-[1.7px]">
+                                    <h2 className="text-[12px] font-bold border-b border-black">Energy: {energyCount}</h2>
+                                    <div className="grid grid-cols-9 gap-1 text-[11px] font-bold border-b border-black py-[1.7px]">
                                         <span className="col-span-2">Qty:</span>
                                         <span className="col-span-6">Name:</span>
                                         <span className="no-print"></span>
                                     </div>
                                     {cards.energy.map((card) => (
-                                        <div key={card.id} className="grid grid-cols-9 gap-1 text-[12px] border-b border-gray-300 py-[1.7px]">
+                                        <div key={card.id} className="grid grid-cols-9 gap-1 text-[11px] border-b border-gray-300 py-[1.7px]">
                                             <select
                                                 value={card.qty}
                                                 onChange={(e) => handleCardChange("energy", card.id, "qty", e.target.value)}
-                                                className="col-span-2 p-[1.7px] border border-black rounded text-[12px]"
+                                                className="col-span-2 p-[1.7px] border border-black rounded text-[11px]"
                                             >
                                                 {[...Array(60).keys()].map((num) => (
                                                     <option key={num} value={num}>{num}</option>
@@ -753,7 +753,7 @@
                                             </div>
                                             <button
                                                 onClick={() => removeRow("energy", card.id)}
-                                                className="no-print text-red-600 font-extrabold text-[10.5px]"
+                                                className="no-print text-red-600 font-extrabold text-[12px]"
                                                 disabled={cards.energy.length <= 1}
                                             >
                                                 X
@@ -773,30 +773,30 @@
 
                             <div className="flex justify-between items-center mt-[6.8px]">
                                 <div>
-                                    <p className="text-[12px] font-bold">Total Cards: {totalCards}</p>
+                                    <p className="text-[11px] font-bold">Total Cards: {totalCards}</p>
                                 </div>
                                 <div className="flex gap-2 no-print">
                                     <button
                                         onClick={resetForm}
-                                        className="bg-red-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-red-700 text-[12px]"
+                                        className="bg-red-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-red-700 text-[11px]"
                                     >
                                         Reset
                                     </button>
                                     <button
                                         onClick={() => setShowImportModal(true)}
-                                        className="bg-blue-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-blue-700 text-[12px]"
+                                        className="bg-blue-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-blue-700 text-[11px]"
                                     >
                                         Import
                                     </button>
                                     <button
                                         onClick={handleExport}
-                                        className="bg-blue-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-blue-700 text-[12px]"
+                                        className="bg-blue-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-blue-700 text-[11px]"
                                     >
                                         Export
                                     </button>
                                     <button
                                         onClick={handlePrint}
-                                        className="bg-green-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-green-700 text-[12px]"
+                                        className="bg-green-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-green-700 text-[11px]"
                                     >
                                         Print
                                     </button>
@@ -806,29 +806,29 @@
                             {showImportModal && (
                                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                                     <div className="bg-white p-4 rounded-lg shadow-lg max-w-md mx-auto">
-                                        <h2 className="text-[10.5px] font-bold mb-2">Import Decklist</h2>
+                                        <h2 className="text-[12px] font-bold mb-2">Import Decklist</h2>
                                         <textarea
                                             value={importText}
                                             onChange={(e) => setImportText(e.target.value)}
-                                            className="w-full h-32 p-2 border border-black rounded text-[12px] mb-2"
+                                            className="w-full h-32 p-2 border border-black rounded text-[11px] mb-2"
                                             placeholder="Paste PTCGL export text or leave blank to upload a file"
                                         />
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={handleImportFile}
-                                                className="bg-blue-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-blue-700 text-[12px]"
+                                                className="bg-blue-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-blue-700 text-[11px]"
                                             >
                                                 Import File
                                             </button>
                                             <button
                                                 onClick={handleImportText}
-                                                className="bg-blue-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-blue-700 text-[12px]"
+                                                className="bg-blue-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-blue-700 text-[11px]"
                                             >
                                                 Import Text
                                             </button>
                                             <button
                                                 onClick={() => { setShowImportModal(false); setImportText(""); }}
-                                                className="bg-gray-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-gray-700 text-[12px]"
+                                                className="bg-gray-600 text-white px-[1.7px] py-[1.7px] rounded hover:bg-gray-700 text-[11px]"
                                             >
                                                 Cancel
                                             </button>
