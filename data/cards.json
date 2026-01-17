@@ -2424,7 +2424,7 @@
                                                     "Zorua": [["31", "SFA,H"], ["75", "SFA,H"], ["61", "WHT,I"], ["142", "WHT,I"] ],
                                                     "Zubat": [["27", "SFA,H"], ["110", "PAR,G"], ["41", "MEW,G"] ],
                                                     "Zweilous": [["118", "SSP,H"], ["66", "WHT,I"], ["147", "WHT,I"], ["139", "PAL,G"] ]
-};
+},
    "trainer": [
                          ["Academy at Night"],
                          ["Accompanying Flute"],
@@ -2788,6 +2788,7 @@
                          ["Water Energy"]
    ]
 }
+
 
 
 
