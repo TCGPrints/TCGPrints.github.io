@@ -1210,7 +1210,7 @@
                               ["Zoroark"],
                               ["Zorua"],
                               ["Zubat"],
-                              ["Zweilous"],
+                              ["Zweilous"]
    ],
    "pokemonCollSetReg": {
                                                     "Abomasnow": [["60", "DRI,I"], ["101", "PAF,G"], ["11", "PAL,G"] ],
@@ -2423,7 +2423,7 @@
                                                     "Zoroark": [["32", "SFA,H"], ["62", "WHT,I"], ["143", "WHT,I"] ],
                                                     "Zorua": [["31", "SFA,H"], ["75", "SFA,H"], ["61", "WHT,I"], ["142", "WHT,I"] ],
                                                     "Zubat": [["27", "SFA,H"], ["110", "PAR,G"], ["41", "MEW,G"] ],
-                                                    "Zweilous": [["118", "SSP,H"], ["66", "WHT,I"], ["147", "WHT,I"], ["139", "PAL,G"] ],
+                                                    "Zweilous": [["118", "SSP,H"], ["66", "WHT,I"], ["147", "WHT,I"], ["139", "PAL,G"] ]
 };
    "trainer": [
                          ["Academy at Night"],
@@ -2759,7 +2759,7 @@
                          ["Wondrous Patch"],
                          ["Xerosic's Machinations"],
                          ["Youngster"],
-                         ["Zisu"],
+                         ["Zisu"]
    ],
    "energy": [
                          ["Boomerang Energy"],
@@ -2785,8 +2785,9 @@
                          ["Spiky Energy"],
                          ["Team Rocket's Energy"],
                          ["Therapeutic Energy"],
-                         ["Water Energy"],
+                         ["Water Energy"]
    ]
 }
+
 
 
